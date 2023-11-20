@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+    <head>
+        <title>Steam TRY DB</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <link rel="shortcut icon" href="favicon.ico">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+        <style>
+            :root {
+                --primary: #1b2838;
+            }
+            a.game_price{
+                font-size: 16px;
+                float: right;
+                min-width: 100px;
+                max-width: 100px;
+            }
+        </style>
+        <script src='sql-wasm.js'></script>
+        <script>
+            function search(term) {
+                initSqlJs().then(function(SQL){
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', 'steam.db', true);
+                    xhr.responseType = 'arraybuffer';
+                    xhr.onload = e => {
+                        const uInt8Array = new Uint8Array(xhr.response);
+                        const db = new SQL.Database(uInt8Array);
+                        const query = `SELECT * FROM game g WHERE g.name like "%${term}%" or g.appid = "${term}"`;
+                        console.log(query)
+                        const stmt = db.prepare(query);
+                        document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
+                        while(stmt.step()) { //
+                            const row = stmt.getAsObject();
+                            document.getElementById("game_list").insertAdjacentHTML("beforeend",`<button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name} <a href="#" role="button" class="secondary game_price" data-tooltip="${row.price/100} ₺" >${row.price/100} ₺</a></button>`)
+                        }
+                    };
+                    xhr.send();
+                })
+            };
+        </script>
+    </head>
+    <body>
+        <main class="container">
+            <h3 style="text-align: center;">Steam Türk Lirası Fiyat Veritabanı</h3>
+            <input type="text" id="search_input" placeholder="Oyun İsmi / AppID" required>
+            <button type="submit" onclick="search(document.getElementById('search_input').value)">Ara</button>
+            <div id="game_list">
+            </div>
+        </main>
+        <footer style="text-align: center;">
+            <h6>Son Güncelleme : 19 Kasım 2023 - 8.45 PM</h6>
+            <a href="https://github.com/hauptkern/steamtrydb" style="color:gray">Kaynak Kodu</a>
+        </footer>
+    </body>
+</html>
