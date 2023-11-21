@@ -36,8 +36,8 @@
                         while(stmt.step()) {
                             const row = stmt.getAsObject();
                                 const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${row.appid}&cc=tr&filters=price_overview`;
-                                const proxyUrl = 'https://universal-cors-proxy.glitch.me/';
-                                fetch(proxyUrl + encodeURIComponent(targetUrl))
+                                const proxyUrl = 'https://api.codetabs.com/v1/proxy?quest=';
+                                fetch(proxyUrl + targetUrl)
                                 .then(response => response.json())
                                 .then((data) => {
                                     const new_price = data[row.appid].data.price_overview.final;
