@@ -18,6 +18,7 @@
             }
             th,tr,td {
                 text-align: center;
+                border-bottom: 0px;
             }
         </style>
         <script src='sql-wasm.js'></script>
@@ -33,49 +34,78 @@
                         const query = `SELECT * FROM game g WHERE g.name like "%${term}%" or g.appid = "${term}"`;
                         const stmt = db.prepare(query);
                         document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
+                        document.getElementById("game_list").insertAdjacentHTML("beforeend",'<a id="loading" aria-busy="true"></a>');
+                        let appid_items = [];
                         while(stmt.step()) {
                             const row = stmt.getAsObject();
-                                const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${row.appid}&cc=tr&filters=price_overview`;
-                                const proxyUrl = 'https://universal-cors-proxy.glitch.me/';
-                                fetch(proxyUrl + encodeURIComponent(targetUrl))
-                                .then(response => response.json())
-                                .then((data) => {
-                                    const new_price = data[row.appid].data.price_overview.final;
-                                    const old_price = row.price/100;
+                            appid_items.push(row);
+                        }
+                        if (appid_items.length === 0){
+                            document.getElementById("loading").ariaBusy="false";
+                            document.getElementById("game_list").insertAdjacentHTML("beforeend","<h6>Sonuç Bulunamadı.</h6>");
+                            return;
+                        }
+                        const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${appid_items.flatMap(({ appid }) => appid).join()}&cc=tr&filters=price_overview`;
+                        const proxyUrl = 'https://universal-cors-proxy.glitch.me/';
+                        fetch(proxyUrl + encodeURIComponent(targetUrl))
+                        .then(function (response) {
+                            const rescpy = response.clone();
+                            const resp_text = rescpy.text();
+                            if (["null","Access Denied"].some(v => resp_text === v)){
+                                document.getElementById("loading").ariaBusy="false";
+                                document.getElementById("game_list").insertAdjacentHTML("beforeend","<h6>Hata Oluştu! (Rate Limit)</h6>");
+                            }
+                            return response.json()})
+                        .then((json_resp) => {
+                            let new_price_list = {};
+                            for (var game in json_resp){
+                                const new_price = json_resp[game].data.price_overview.final;
+                                new_price_list[game] = new_price;
+                            }
+                            document.getElementById("loading").ariaBusy="false";
+                            appid_items.forEach((row)=>{
+                                try {
                                     const table = `
                                     <button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
                                         <table>
                                             <tr>
                                                 <th>Eski Fiyat</th>
-                                                <th>Yeni Fiyat (Mena USD) ⮞ ₺</th>
+                                                <th>Güncel Fiyat (M-USD ➔ ₺)</th>
                                             </tr>
                                             <tr>
-                                                <td>${(old_price===0) ? "N/A" : old_price.toFixed(2) + " ₺"}</td>
-                                                <td>${((new_price/100)*last_rate).toFixed(2)} ₺</td>
+                                                <td>${(row.price===0) ? "N/A" : (row.price/100).toFixed(2)} ₺</td>
+                                                <td>${((new_price_list[row.appid]/100)*last_rate).toFixed(2)} ₺</td>
                                             </tr>
                                             </table>
                                             </button>
                                             `;
                                     document.getElementById("game_list").insertAdjacentHTML("beforeend",table);
-                                })
-                                .catch((error) => {
+                                } catch (error) {
                                     console.log(error);
-                                    const table = `<button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
+                                    const table = `
+                                    <button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
                                         <table>
                                             <tr>
                                                 <th>Eski Fiyat</th>
-                                                <th>Yeni Fiyat (Mena USD) ⮞ ₺</th>
+                                                <th>Güncel Fiyat (M-USD ➔ ₺)</th>
                                             </tr>
                                             <tr>
-                                                <td>${(old_price===0) ? "N/A" : old_price.toFixed(2) + " ₺"}</td>
-                                                <td>-</td>
+                                                <td>${(row.price===0) ? "N/A" : (row.price/100).toFixed(2)} ₺</td>
+                                                <td></td>
                                             </tr>
-                                        </table>
-                                        </button>
-                                        `;
+                                            </table>
+                                            </button>
+                                            `;
                                     document.getElementById("game_list").insertAdjacentHTML("beforeend",table);
-                                });
-                        }
+                                }
+                            
+                            })
+                        })
+                        .catch((error) => {
+                            console.log(error);
+                            document.getElementById("loading").ariaBusy="false";
+                            document.getElementById("game_list").insertAdjacentHTML("beforeend","<h6>Hata Oluştu!</h6>");
+                        })
                     };
                     xhr.send();
                 })
@@ -96,6 +126,9 @@
                     last_rate = data.l;
                     socket.close();
                 }
+            socket.onerror = function(err){
+                console.log("Socket Connection Error!")
+            }
             };
         </script>
     </head>
@@ -106,7 +139,7 @@
             </div>
             <input type="text" id="search_input" placeholder="Oyun İsmi / AppID" required>
             <button type="submit" onclick="search(document.getElementById('search_input').value)">Ara</button>
-            <div id="game_list">
+            <div id="game_list" style="text-align: center;">
             </div>
         </main>
         <footer style="text-align: center;">
