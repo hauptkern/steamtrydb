@@ -15,6 +15,9 @@
                 min-width: 100px;
                 max-width: 100px;
             }
+            th,tr,td {
+                text-align: center;
+            }
         </style>
         <script src='sql-wasm.js'></script>
         <script>
@@ -27,22 +30,79 @@
                         const uInt8Array = new Uint8Array(xhr.response);
                         const db = new SQL.Database(uInt8Array);
                         const query = `SELECT * FROM game g WHERE g.name like "%${term}%" or g.appid = "${term}"`;
-                        console.log(query)
                         const stmt = db.prepare(query);
                         document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
                         while(stmt.step()) { //
                             const row = stmt.getAsObject();
-                            document.getElementById("game_list").insertAdjacentHTML("beforeend",`<button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name} <a href="#" role="button" class="secondary game_price" data-tooltip="${row.price/100} ₺" >${row.price/100} ₺</a></button>`)
+                                const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${row.appid}&cc=tr&filters=price_overview`
+                                const proxyUrl = 'https://universal-cors-proxy.glitch.me/';
+                                fetch(proxyUrl + encodeURIComponent(targetUrl))
+                                .then(response => response.json())
+                                .then((data) => {
+                                    const new_price = data[row.appid].data.price_overview.final;
+                                    const old_price = row.price/100
+                                    const table = `
+                                    <button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
+                                        <table>
+                                            <tr>
+                                                <th>Eski Fiyat</th>
+                                                <th>Yeni Fiyat (Mena USD) ⮞ ₺</th>
+                                            </tr>
+                                            <tr>
+                                                <td>${(old_price===0) ? "N/A" : old_price.toFixed(2) + " ₺"}</td>
+                                                <td>${((new_price/100)*last_rate).toFixed(2)} ₺</td>
+                                            </tr>
+                                            </table>
+                                            </button>
+                                            `
+                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table)
+                                })
+                                .catch((error) => {
+                                    console.log(error);
+                                    const table = `<button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
+                                        <table>
+                                            <tr>
+                                                <th>Eski Fiyat</th>
+                                                <th>Yeni Fiyat (Mena USD) ⮞ ₺</th>
+                                            </tr>
+                                            <tr>
+                                                <td>${(old_price===0) ? "N/A" : old_price.toFixed(2) + " ₺"}</td>
+                                                <td>-</td>
+                                            </tr>
+                                        </table>
+                                        </button>
+                                        `
+                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table)
+                                });
                         }
                     };
                     xhr.send();
                 })
             };
         </script>
+        <script>
+            let socket = new WebSocket("wss://ws.foreks.com/websocket");
+            let last_rate = 0
+            socket.onopen = function(e) {
+                socket.send(JSON.stringify({"_id":64,"user":"foreks.com","password":"v4a!K%2R","info":{"company":"foreks","resource":"server","platform":"web","app-name":"foreks-com","device-os":"Win32","device-model":"Gecko","client-address":"https://www.foreks.com","client-port":"","client-language":"en-US","client-navigator":"5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/119.0.0.0 Safari/537.36"},"resource":"server"}))
+                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}))
+            };
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data)
+                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}))
+                if (data._i === "o10"){
+                    document.getElementById("kur_bilgisi").innerHTML = `<h5>Güncel Dolar Kuru : ${data.l} ₺</h5>`;
+                    last_rate = data.l;
+                    socket.close();
+                }
+            };
+        </script>
     </head>
     <body>
         <main class="container">
             <h3 style="text-align: center;">Steam Türk Lirası Fiyat Veritabanı</h3>
+            <div id="kur_bilgisi" style="text-align: center;">
+            </div>
             <input type="text" id="search_input" placeholder="Oyun İsmi / AppID" required>
             <button type="submit" onclick="search(document.getElementById('search_input').value)">Ara</button>
             <div id="game_list">
