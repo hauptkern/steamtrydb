@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html data-theme="dark">
     <head>
-        <title>Steam TRY DB</title>
+        <title>Steam Fiyat Veritabanı</title>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <link rel="shortcut icon" href="favicon.ico">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             :root {
                 --primary: #1b2838;
@@ -32,15 +33,15 @@
                         const query = `SELECT * FROM game g WHERE g.name like "%${term}%" or g.appid = "${term}"`;
                         const stmt = db.prepare(query);
                         document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
-                        while(stmt.step()) { //
+                        while(stmt.step()) {
                             const row = stmt.getAsObject();
-                                const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${row.appid}&cc=tr&filters=price_overview`
+                                const targetUrl = `https://store.steampowered.com/api/appdetails?appids=${row.appid}&cc=tr&filters=price_overview`;
                                 const proxyUrl = 'https://universal-cors-proxy.glitch.me/';
                                 fetch(proxyUrl + encodeURIComponent(targetUrl))
                                 .then(response => response.json())
                                 .then((data) => {
                                     const new_price = data[row.appid].data.price_overview.final;
-                                    const old_price = row.price/100
+                                    const old_price = row.price/100;
                                     const table = `
                                     <button onclick="window.open('https://store.steampowered.com/app/${row.appid}')">${row.name}
                                         <table>
@@ -54,8 +55,8 @@
                                             </tr>
                                             </table>
                                             </button>
-                                            `
-                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table)
+                                            `;
+                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table);
                                 })
                                 .catch((error) => {
                                     console.log(error);
@@ -71,8 +72,8 @@
                                             </tr>
                                         </table>
                                         </button>
-                                        `
-                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table)
+                                        `;
+                                    document.getElementById("game_list").insertAdjacentHTML("beforeend",table);
                                 });
                         }
                     };
@@ -82,14 +83,14 @@
         </script>
         <script>
             let socket = new WebSocket("wss://ws.foreks.com/websocket");
-            let last_rate = 0
+            let last_rate = 0;
             socket.onopen = function(e) {
-                socket.send(JSON.stringify({"_id":64,"user":"foreks.com","password":"v4a!K%2R","info":{"company":"foreks","resource":"server","platform":"web","app-name":"foreks-com","device-os":"Win32","device-model":"Gecko","client-address":"https://www.foreks.com","client-port":"","client-language":"en-US","client-navigator":"5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/119.0.0.0 Safari/537.36"},"resource":"server"}))
-                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}))
+                socket.send(JSON.stringify({"_id":64,"user":"foreks.com","password":"v4a!K%2R","info":{"company":"foreks","resource":"server","platform":"web","app-name":"foreks-com","device-os":"Win32","device-model":"Gecko","client-address":"https://www.foreks.com","client-port":"","client-language":"en-US","client-navigator":"5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML like Gecko) Chrome/119.0.0.0 Safari/537.36"},"resource":"server"}));
+                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}));
             };
             socket.onmessage = function(event) {
-                const data = JSON.parse(event.data)
-                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}))
+                const data = JSON.parse(event.data);
+                socket.send(JSON.stringify({"_id":1,"id":713,"symbols":["o10"],"fields":["l"]}));
                 if (data._i === "o10"){
                     document.getElementById("kur_bilgisi").innerHTML = `<h5>Güncel Dolar Kuru : ${data.l} ₺</h5>`;
                     last_rate = data.l;
