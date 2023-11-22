@@ -21,9 +21,9 @@
                 border-bottom: 0px;
             }
         </style>
-        <script src='sql-wasm.js'></script>
+        <script src='sql-asm.js'></script>
         <script>
-            window.onload=function(){
+            window.onload=async function(){
                     document.getElementById("search_btn").disabled=true;
                     document.getElementById("db_status").innerHTML = '<a id="db_loading" aria-busy="true" style="color:white;">Veritabanı Yükleniyor...</a>'
                     const xhr = new XMLHttpRequest();
@@ -32,12 +32,13 @@
                     xhr.onload = e => {
                         document.getElementById("search_btn").disabled=false;
                         document.getElementById("db_status").outerHTML="";
+                        document.getElementById("search_btn").onclick=async() => {document.getElementById("game_list").insertAdjacentHTML("beforeend",'<a id="db_loading" aria-busy="true" style="color:white;">Sonuçlar Yükleniyor...</a>');await search(document.getElementById('search_input').value)};
                     }
                     xhr.send();
             }
         </script>
         <script>
-            function search(term) {
+            async function search(term) {
                 initSqlJs().then(function(SQL){
                     const xhr = new XMLHttpRequest();
                     xhr.open('GET', 'steam.db', true);
@@ -47,13 +48,14 @@
                         const db = new SQL.Database(uInt8Array);
                         const query = `SELECT * FROM game g WHERE g.name like "%${term}%" or g.appid = "${term}"`;
                         const stmt = db.prepare(query);
-                        document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
-                        document.getElementById("game_list").insertAdjacentHTML("beforeend",'<a id="loading" aria-busy="true"></a>');
                         let appid_items = [];
                         while(stmt.step()) {
                             const row = stmt.getAsObject();
                             appid_items.push(row);
                         }
+
+                        document.getElementById("game_list").innerHTML = "<hr style='margin-bottom:40px;margin-top:40px;'>";
+                        document.getElementById("game_list").insertAdjacentHTML("beforeend",'<a id="loading" aria-busy="true"></a>');
                         if (appid_items.length === 0){
                             document.getElementById("loading").ariaBusy="false";
                             document.getElementById("game_list").insertAdjacentHTML("beforeend","<h6>Sonuç Bulunamadı.</h6>");
@@ -151,7 +153,7 @@
             <h3 style="text-align: center;">Steam Türk Lirası Fiyat Veritabanı</h3>
             <div id="kur_bilgisi" style="text-align: center;"></div>
             <input type="text" id="search_input" placeholder="Oyun İsmi / AppID" required>
-            <button type="submit" id="search_btn" onclick="search(document.getElementById('search_input').value)">Ara</button>
+            <button type="submit" id="search_btn">Ara</button>
             <div id="db_status" style="text-align: center;"></div>
             <div id="game_list" style="text-align: center;"></div>
         </main>
