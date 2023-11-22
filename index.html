@@ -23,6 +23,20 @@
         </style>
         <script src='sql-wasm.js'></script>
         <script>
+            window.onload=function(){
+                    document.getElementById("search_btn").disabled=true;
+                    document.getElementById("db_status").innerHTML = '<a id="db_loading" aria-busy="true" style="color:white;">Veritabanı Yükleniyor...</a>'
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', 'steam.db', true);
+                    xhr.responseType = 'arraybuffer';
+                    xhr.onload = e => {
+                        document.getElementById("search_btn").disabled=false;
+                        document.getElementById("db_status").outerHTML="";
+                    }
+                    xhr.send();
+            }
+        </script>
+        <script>
             function search(term) {
                 initSqlJs().then(function(SQL){
                     const xhr = new XMLHttpRequest();
@@ -135,12 +149,11 @@
     <body>
         <main class="container">
             <h3 style="text-align: center;">Steam Türk Lirası Fiyat Veritabanı</h3>
-            <div id="kur_bilgisi" style="text-align: center;">
-            </div>
+            <div id="kur_bilgisi" style="text-align: center;"></div>
             <input type="text" id="search_input" placeholder="Oyun İsmi / AppID" required>
-            <button type="submit" onclick="search(document.getElementById('search_input').value)">Ara</button>
-            <div id="game_list" style="text-align: center;">
-            </div>
+            <button type="submit" id="search_btn" onclick="search(document.getElementById('search_input').value)">Ara</button>
+            <div id="db_status" style="text-align: center;"></div>
+            <div id="game_list" style="text-align: center;"></div>
         </main>
         <footer style="text-align: center;">
             <h6>Son Güncelleme : 20 Kasım 2023 - 4.45 PM (AppID Count : 95064)</h6>
